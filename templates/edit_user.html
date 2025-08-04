@@ -1,0 +1,73 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        
+</script>
+{% extends "base.html" %}
+{% block title %}Alterar Usuário/Senha{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+        <h2 class="text-2xl font-bold mb-6 text-center">Alterar Usuário/Senha</h2>
+        <form method="POST" class="space-y-4">
+            <div>
+                <label for="username" class="block text-gray-700 font-semibold mb-2">Novo Usuário:</label>
+                <input type="text" name="username" id="username" value="{{ current_user.username }}" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label for="email" class="block text-gray-700 font-semibold mb-2">Novo E-mail:</label>
+                <input type="email" name="email" id="email" value="{{ current_user.email }}" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label for="current_password" class="block text-gray-700 font-semibold mb-2">Senha Atual:</label>
+                <input type="password" name="current_password" id="current_password" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label for="new_password" class="block text-gray-700 font-semibold mb-2">Nova Senha:</label>
+                <input type="password" name="new_password" id="new_password" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <p class="text-gray-500 text-sm mt-1">Deixe em branco para manter a senha atual.</p>
+            </div>
+            <div class="flex space-x-3">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors flex-1">Salvar</button>
+                <a href="{{ url_for('index') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors flex-1 text-center">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

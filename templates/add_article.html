@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Adicionar/Editar Artigo{% endblock %}
+{% block content %}
+<div class="max-w-8xl mx-auto">
+    <h2 class="text-2xl font-bold mb-6">{{ 'Editar' if article else 'Adicionar' }} FAQ</h2>
+    <form method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md border border-gray-200" id="articleForm">
+        <div class="mb-4">
+            <label for="title" class="block text-gray-700 font-semibold mb-2">Título:</label>
+            <input type="text" name="title" id="title" value="{{ article.title if article else '' }}" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="mb-4">
+            <label for="product" class="block text-gray-700 font-semibold mb-2">Produto:</label>
+            <select name="product" id="product" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <option value="">Selecione um produto</option>
+                <option value="Creo Parametric" {% if article and article.product == 'Creo Parametric' %}selected{% endif %}>Creo Parametric</option>
+                <option value="Creo View" {% if article and article.product == 'Creo View' %}selected{% endif %}>Creo View</option>
+                <option value="Windchill" {% if article and article.product == 'Windchill' %}selected{% endif %}>Windchill</option>
+                <option value="Toolkit" {% if article and article.product == 'Toolkit' %}selected{% endif %}>Toolkit</option>
+                <option value="Illustrate" {% if article and article.product == 'Illustrate' %}selected{% endif %}>Illustrate</option>
+                <option value="Mathcad" {% if article and article.product == 'Mathcad' %}selected{% endif %}>Mathcad</option>
+                <option value="Outros" {% if article and article.product == 'Outros' %}selected{% endif %}>Outros</option>
+            </select>
+        </div>
+        <div class="mb-4" id="subproduct-container" style="display: {% if article and article.product == 'Creo Parametric' %}block{% else %}none{% endif %};">
+            <label for="subproduct" class="block text-gray-700 font-semibold mb-2">Sub-Produto:</label>
+            <select name="subproduct" id="subproduct" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" {% if not article or not article.subproduct %}selected{% endif %}>Nenhum</option>
+                <option value="Simulation" {% if article and article.subproduct == 'Simulation' %}selected{% endif %}>Simulation</option>
+                <option value="Creo Ansys" {% if article and article.subproduct == 'Creo Ansys' %}selected{% endif %}>Creo Ansys</option>
+                <option value="Render" {% if article and article.subproduct == 'Render' %}selected{% endif %}>Render</option>
+                <option value="Cabling" {% if article and article.subproduct == 'Cabling' %}selected{% endif %}>Cabling</option>
+                <option value="Piping" {% if article and article.subproduct == 'Piping' %}selected{% endif %}>Piping</option>
+                <option value="Manufacturing" {% if article and article.subproduct == 'Manufacturing' %}selected{% endif %}>Manufacturing</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label for="question" class="block text-gray-700 font-semibold mb-2">Descrição:</label>
+            <textarea name="question" id="question" rows="4" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ article.question if article else '' }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label for="solution" class="block text-gray-700 font-semibold mb-2">Solução:</label>
+            <textarea name="solution" id="solution" rows="6" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ article.solution if article else '' }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label for="media" class="block text-gray-700 font-semibold mb-2">Mídias e Arquivos (opcional, máximo 2 GB):</label>
+            <div class="dropzone" ondragover="dragOverHandler(event)" ondragleave="dragLeaveHandler(event)" ondrop="dropHandler(event)" onclick="triggerFileInput()">
+                <p>Arraste e solte arquivos aqui ou clique para selecionar</p>
+            </div>
+            <input type="file" name="media" id="media" multiple style="display: none;" onchange="updateFileDisplay(this.files)">
+            <small id="fileNameDisplay" class="block mt-2 text-gray-600">Nenhum arquivo selecionado</small>
+            <small id="errorMessage" class="block mt-2 text-red-600"></small>
+            <p class="text-gray-500 text-sm mt-1">Qualquer tipo de arquivo é aceito, com limite de 2 GB por arquivo.</p>
+        </div>
+        <div class="flex space-x-4">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">{{ 'Atualizar' if article else 'Adicionar' }} Artigo</button>
+            <a href="{{ url_for('index') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Cancelar</a>
+        </div>
+    </form>
+</div>
+<script>
+    // Mostrar/esconder subproduto com base no produto selecionado
+    document.getElementById('product').addEventListener('change', function() {
+        const subproductContainer = document.getElementById('subproduct-container');
+        if (this.value === 'Creo Parametric') {
+            subproductContainer.style.display = 'block';
+        } else {
+            subproductContainer.style.display = 'none';
+            document.getElementById('subproduct').value = '';
+        }
+    });
+
+    function isFileSupported(file) {
+        return file.size <= 2 * 1024 * 1024 * 1024; // 2 GB
+    }
+
+    function dragOverHandler(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add('dragover');
+    }
+
+    function dragLeaveHandler(ev) {
+        ev.currentTarget.classList.remove('dragover');
+    }
+
+    function dropHandler(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove('dragover');
+        const fileInput = document.getElementById('media');
+        const errorMessage = document.getElementById('errorMessage');
+        const dataTransfer = new DataTransfer();
+
+        errorMessage.textContent = '';
+
+        if (ev.dataTransfer.files.length > 0) {
+            Array.from(ev.dataTransfer.files).forEach(file => {
+                if (isFileSupported(file)) {
+                    dataTransfer.items.add(file);
+                } else {
+                    errorMessage.textContent = `Erro: O arquivo "${file.name}" excede o limite de 2 GB.`;
+                }
+            });
+            fileInput.files = dataTransfer.files;
+            updateFileDisplay(fileInput.files);
+        }
+    }
+
+    function triggerFileInput() {
+        document.getElementById('media').click();
+    }
+
+    function updateFileDisplay(files) {
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const errorMessage = document.getElementById('errorMessage');
+        if (files.length > 0) {
+            Array.from(files).forEach(file => {
+                if (!isFileSupported(file)) {
+                    errorMessage.textContent = `Erro: O arquivo "${file.name}" excede o limite de 2 GB.`;
+                }
+            });
+            fileNameDisplay.textContent = `Arquivos selecionados: ${Array.from(files).map(file => file.name).join(', ')}`;
+        } else {
+            fileNameDisplay.textContent = 'Nenhum arquivo selecionado';
+        }
+    }
+
+    // Validação manual antes do envio
+    const form = document.getElementById('articleForm');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = ['title', 'product', 'question', 'solution'];
+        let isValid = true;
+        requiredFields.forEach(field => {
+            const input = document.getElementById(field);
+            if (!input.value.trim()) {
+                isValid = false;
+                console.warn(`Campo ${field} está vazio`);
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            console.error('Formulário inválido, preencha todos os campos obrigatórios');
+            alert('Por favor, preencha todos os campos obrigatórios.');
+        } else {
+            console.log('Dados do formulário antes do envio:');
+            const formData = new FormData(this);
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}:`, value);
+            }
+        }
+    });
+</script>
+<style>
+    .dropzone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        background-color: #f9f9f9;
+        transition: all 0.4s ease-in-out;
+    }
+    .dropzone.dragover {
+        border-color: #1e90ff;
+        background-color: #d1e7ff;
+        box-shadow: 0 0 15px rgba(30, 144, 255, 0.7);
+        transform: translateY(-5px);
+        animation: enhancedPulse 1.2s infinite;
+    }
+    @keyframes enhancedPulse {
+        0% {
+            transform: translateY(-5px) scale(1);
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.7);
+        }
+        50% {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 0 20px rgba(30, 144, 255, 0.9);
+        }
+        100% {
+            transform: translateY(-5px) scale(1);
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.7);
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,89 @@
+fetch(window.location.href, { method: 'HEAD' })
+    .then(response => {
+        const errorStatus = response.headers.get('X-Error-Status');
+        if (errorStatus) {
+            document.querySelector('.status').innerHTML += `<br>Erro: ${errorStatus}`;
+        }
+    });
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Fora do Ar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .central-panel {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #d32f2f;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .status {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #1976d2;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="central-panel">
+        <h1>Site Fora do Ar</h1>
+        <p>Desculpe, nosso servidor está temporariamente indisponível. Estamos trabalhando para resolver o problema o mais rápido possível.</p>
+        <div class="status">Última verificação: <span id="last-check">Carregando...</span></div>
+        <p>Entre em contato com o suporte: <a href="mailto:suporte@exemplo.com">suporte@exemplo.com</a> ou (XX) XXXX-XXXX.</p>
+        <a href="http://192.168.5.141:5001" class="btn">Tentar Novamente</a>
+    </div>
+    <script>
+        // Atualiza a última verificação
+        const lastCheck = document.getElementById('last-check');
+        const now = new Date().toLocaleString('pt-BR');
+        lastCheck.textContent = now;
+
+        // Opcional: Tenta verificar o status do servidor
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('http://192.168.5.141:5001', { method: 'HEAD', mode: 'no-cors' });
+                if (response.ok) {
+                    window.location.reload(); // Recarrega se o servidor voltar
+                }
+            } catch (error) {
+                console.log('Servidor ainda fora do ar:', error);
+            }
+        }
+        setInterval(checkServerStatus, 30000); // Verifica a cada 30 segundos
+    </script>
+</body>
+</html>

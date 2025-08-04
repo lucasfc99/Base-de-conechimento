@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Procedimentos Técnicos{% endblock %}
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
+    <h3 class="text-lg font-semibold mb-4">Procedimentos Técnicos</h3>
+    <form method="GET" id="searchForm" class="flex flex-col space-y-4">
+        <div class="flex items-center space-x-2">
+            <div class="relative flex-1">
+                <input type="text" name="search" id="search" placeholder="Pesquisar por título..." value="{{ request.args.get('search', '') }}" class="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Buscar</button>
+            <a href="{{ url_for('procedures') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Limpar</a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('add_procedure') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors ml-2">Adicionar Procedimento</a>
+            {% endif %}
+        </div>
+        <div class="flex flex-col md:flex-row md:space-x-4">
+            <div class="flex items-center space-x-2">
+                <label for="sort" class="text-gray-600">Ordenar por:</label>
+                <select name="sort" id="sort" onchange="document.getElementById('searchForm').submit()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="asc" {% if request.args.get('sort', 'desc') == 'asc' %}selected{% endif %}>Mais Antigo</option>
+                    <option value="desc" {% if request.args.get('sort', 'desc') == 'desc' %}selected{% endif %}>Mais Recente</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2">
+                <label for="product" class="text-gray-600">Produto:</label>
+                <select name="product" id="product" onchange="handleProductChange()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" {% if not request.args.get('product') %}selected{% endif %}>Todos</option>
+                    <option value="Creo Parametric" {% if request.args.get('product') == 'Creo Parametric' %}selected{% endif %}>Creo Parametric</option>
+                    <option value="Creo View" {% if request.args.get('product') == 'Creo View' %}selected{% endif %}>Creo View</option>
+                    <option value="Windchill" {% if request.args.get('product') == 'Windchill' %}selected{% endif %}>Windchill</option>
+                    <option value="Toolkit" {% if request.args.get('product') == 'Toolkit' %}selected{% endif %}>Toolkit</option>
+                    <option value="Illustrate" {% if request.args.get('product') == 'Illustrate' %}selected{% endif %}>Illustrate</option>
+                    <option value="Mathcad" {% if request.args.get('product') == 'Mathcad' %}selected{% endif %}>Mathcad</option>
+                    <option value="Outros" {% if request.args.get('product') == 'Outros' %}selected{% endif %}>Outros</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2" id="subproduct-container" {% if request.args.get('product') != 'Creo Parametric' %}style="display: none;"{% endif %}>
+                <label for="subproduct" class="text-gray-600">Sub-Produto:</label>
+                <select name="subproduct" id="subproduct" onchange="document.getElementById('searchForm').submit()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" {% if not request.args.get('subproduct') %}selected{% endif %}>Todos</option>
+                    <option value="Simulation" {% if request.args.get('subproduct') == 'Simulation' %}selected{% endif %}>Simulation</option>
+                    <option value="Creo Ansys" {% if request.args.get('subproduct') == 'Creo Ansys' %}selected{% endif %}>Creo Ansys</option>
+                    <option value="Render" {% if request.args.get('subproduct') == 'Render' %}selected{% endif %}>Render</option>
+                    <option value="Cabling" {% if request.args.get('subproduct') == 'Cabling' %}selected{% endif %}>Cabling</option>
+                    <option value="Piping" {% if request.args.get('subproduct') == 'Piping' %}selected{% endif %}>Piping</option>
+                </select>
+            </div>
+        </div>
+    </form>
+    <script>
+        function handleProductChange() {
+            var productSelect = document.getElementById('product');
+            var subproductContainer = document.getElementById('subproduct-container');
+            var subproductSelect = document.getElementById('subproduct');
+            if (productSelect.value === 'Creo Parametric') {
+                subproductContainer.style.display = 'flex';
+            } else {
+                subproductContainer.style.display = 'none';
+                subproductSelect.value = '';
+            }
+            document.getElementById('searchForm').submit();
+        }
+    </script>
+</div>
+<!-- Lista de Procedimentos -->
+{% if procedures %}
+<div class="space-y-4">
+    {% for procedure in procedures %}
+    <div class="bg-white p-4 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow duration-300 flex items-start space-x-4">
+        <!-- Ícone do arquivo com link para PDF -->
+        <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center">
+            {% if procedure.file_path.endswith('.pdf') %}
+                <a href="{{ url_for('static', filename=procedure.file_path) }}" target="_blank" title="Visualizar PDF">
+                    <img src="{{ url_for('static', filename='images/pdf-icon.png') }}" alt="PDF Icon" class="w-10 h-10 object-contain hover:opacity-80 transition">
+                </a>
+            {% elif procedure.file_path.endswith(('.doc', '.docx')) %}
+                <img src="{{ url_for('static', filename='images/word-icon.png') }}" alt="Word Icon" class="w-10 h-10 object-contain">
+            {% elif procedure.file_path.endswith('.txt') %}
+                <img src="{{ url_for('static', filename='images/txt-icon.png') }}" alt="TXT Icon" class="w-10 h-10 object-contain">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/video-icon.png') }}" alt="Video Icon" class="w-10 h-10 object-contain">
+            {% endif %}
+        </div>
+        <!-- Informações e Preview -->
+        <div class="flex-1">
+            <!-- Título com link para detalhes -->
+            <a href="{{ url_for('view_procedure', id=procedure.id) }}" class="text-lg font-semibold text-blue-600 hover:underline">
+                {{ procedure.title }}
+            </a>
+            <p class="text-gray-600 text-sm mt-1">Criado por: {{ procedure.created_by_username }} em {{ procedure.created_at }}</p>
+            <!-- Preview -->
+            <div class="mt-2">
+                {% if procedure.preview_path and procedure.file_path.endswith('.pdf') %}
+                    <a href="{{ url_for('static', filename=procedure.file_path) }}" target="_blank" title="Visualizar PDF">
+                        <img src="{{ url_for('static', filename=procedure.preview_path) }}" alt="Preview do PDF" class="w-32 h-32 object-contain rounded-md border border-gray-200 hover:border-blue-500 transition-colors">
+                    </a>
+                {% elif procedure.preview_text %}
+                    <a href="{{ url_for('static', filename=procedure.file_path) }}" class="block text-sm text-gray-700 p-2 bg-gray-100 rounded-md hover:bg-gray-200">
+                        {{ procedure.preview_text | safe }}
+                    </a>
+                {% else %}
+                    <p class="text-sm text-gray-500 italic">Preview não disponível.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-auto flex flex-col items-end space-y-2">
+            <!-- Botão Dropdown para Download -->
+            <div class="relative inline-block text-left">
+                <button type="button" class="bg-blue-600 text-white px-3 py-1 rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center" id="download-menu-{{ procedure.id }}" aria-expanded="false" aria-haspopup="true">
+                    Download
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <!-- Menu Dropdown -->
+                <div id="download-options-{{ procedure.id }}" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                    <a href="{{ url_for('download_procedure_pdf', id=procedure.id) }}" download class="block px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center">
+                        <img src="{{ url_for('static', filename='images/pdf-icon.png') }}" alt="PDF Icon" class="w-5 h-5 mr-2 object-contain">
+                        Download PDF
+                    </a>
+                    <a href="{{ url_for('static', filename=procedure.file_path|replace('.pdf', '.docx')) }}" download class="block px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center">
+                        <img src="{{ url_for('static', filename='images/word-icon.png') }}" alt="Word Icon" class="w-5 h-5 mr-2 object-contain">
+                        Download Word
+                    </a>
+                </div>
+            </div>
+            <!-- Botão de Editar -->
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('edit_procedure', id=procedure.id) }}" class="bg-yellow-500 text-white px-3 py-1 rounded-lg shadow hover:bg-yellow-600 transition-colors w-full text-center">Editar</a>
+            {% endif %}
+            <!-- Botão de Excluir (apenas para admins) -->
+            {% if current_user.is_admin %}
+                <form action="{{ url_for('delete_procedure', id=procedure.id) }}" method="POST" onsubmit="return confirm('Tem certeza de que deseja excluir este procedimento?');" class="inline w-full">
+                    <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded-lg shadow hover:bg-red-700 transition-colors w-full">Excluir</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+    <p class="text-gray-600">Nenhum procedimento técnico encontrado.</p>
+{% endif %}
+<!-- Adicionar Botão -->
+{% if current_user.is_authenticated %}
+    <div class="mt-6">
+        <a href="{{ url_for('add_procedure') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors">Adicionar Procedimento</a>
+    </div>
+{% endif %}
+<script>
+    document.querySelectorAll('[id^="download-menu-"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const menuId = this.id.replace('download-menu-', 'download-options-');
+            const menu = document.getElementById(menuId);
+            menu.classList.toggle('hidden');
+            this.setAttribute('aria-expanded', menu.classList.contains('hidden') ? 'false' : 'true');
+        });
+    });
+    document.addEventListener('click', function(e) {
+        document.querySelectorAll('[id^="download-options-"]').forEach(menu => {
+            const button = document.getElementById('download-menu-' + menu.id.replace('download-options-', ''));
+            if (!menu.contains(e.target) && !button.contains(e.target)) {
+                menu.classList.add('hidden');
+                button.setAttribute('aria-expanded', 'false');
+            }
+        });
+    });
+</script>
+{% endblock %}

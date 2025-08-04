@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Recuperação de Conta{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white p-6 rounded-lg shadow-md mb-15 border border-gray-350 hover:shadow-lg transition-shadow duration-600 flex flex-col" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 500px; width: 100%;">
+        <h2 class="text-2xl font-bold mb-6 text-center">Recuperação de Conta</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="POST" action="{{ url_for('recover') }}">
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-medium text-gray-700">Nome de Usuário</label>
+                <input type="text" name="username" id="username" class="mt-1 block w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="mb-6">
+                <label for="otp_code" class="block text-sm font-medium text-gray-700">Código OTP (Google Authenticator)</label>
+                <input type="text" name="otp_code" id="otp_code" class="mt-1 block w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="flex flex-col space-y-3">
+                <a href="{{ url_for('login') }}" class="bg-gray-300 text-gray-700 p-2 rounded-md hover:bg-gray-400 transition-colors text-center w-full">Voltar ao Login</a>
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-500 transition-colors">Recuperar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+<!-- Scripts Cloudflare -->
+<script>
+    (function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'943c6399f970bfb3',t:'MTc0NzkxNzcwMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
+</script>
+<script>
+    (function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'94d2bdcefa5c7bbd',t:'MTc0OTQ5NDI1OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
+</script>
