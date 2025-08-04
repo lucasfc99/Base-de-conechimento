@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Configuração do Google Authenticator{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white p-6 rounded-lg shadow-md mb-15 border border-gray-350 hover:shadow-lg transition-shadow duration-600 flex flex-col" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 500px; width: 100%;">
+        <h2 class="text-2xl font-bold mb-6 text-center">Configuração do Google Authenticator</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <p class="text-center mb-4">Escaneie o QR code abaixo com o aplicativo Google Authenticator ou use o segredo manualmente.</p>
+        <div class="flex justify-center mb-4">
+            <img src="data:image/png;base64,{{ qr_img }}" alt="QR Code para {{ username }}" class="max-w-full h-auto">
+        </div>
+        <p class="text-center mb-4"><strong>Segredo OTP:</strong> {{ otp_secret }}</p>
+        <a href="{{ url_for('login') }}" class="bg-gray-300 text-gray-700 p-2 rounded-md hover:bg-gray-400 transition-colors text-center w-full mb-4">Voltar ao Login</a>
+    </div>
+</div>
+{% endblock %}

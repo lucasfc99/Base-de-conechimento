@@ -1,0 +1,229 @@
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+{% extends "base.html" %}
+{% block title %}Adicionar Vídeo Tutorial{% endblock %}
+{% block content %}
+<div class="max-w-7.5xl mx-auto min-h-screen">
+    <h2 class="text-2xl font-bold mb-6">Adicionar Vídeo Tutorial</h2>
+    <form id="uploadForm" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div>
+            <label for="title" class="block text-gray-700 font-medium mb-2">Título</label>
+            <input type="text" id="title" name="title" required class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value="">
+        </div>
+        <div>
+            <label for="description" class="block text-gray-700 font-medium mb-2">Descrição</label>
+            <textarea id="description" name="description" required class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+            <label for="product" class="block text-gray-700 font-medium mb-2">Produto</label>
+            <select id="product" name="product" required class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecione um produto</option>
+                <option value="Creo Parametric">Creo Parametric</option>
+                <option value="Creo View">Creo View</option>
+                <option value="Windchill">Windchill</option>
+                <option value="Toolkit">Toolkit</option>
+                <option value="Illustrate">Illustrate</option>
+                <option value="Mathcad">Mathcad</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+        <div id="subproductDiv" class="hidden">
+            <label for="subproduct" class="block text-gray-700 font-medium mb-2">Subproduto</label>
+            <select id="subproduct" name="subproduct" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Nenhum</option>
+                <option value="Simulation">Simulation</option>
+                <option value="Creo Ansys">Creo Ansys</option>
+                <option value="Render">Render</option>
+                <option value="Cabling">Cabling</option>
+                <option value="Piping">Piping</option>
+                <option value="Manufacturing">Manufacturing</option>
+            </select>
+        </div>
+        <div>
+            <label for="video" class="block text-gray-700 font-medium mb-2">Vídeo ou Arquivo (Máximo 2 GB)</label>
+            <div id="drop-area" class="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <input type="file" id="video" name="video" class="hidden" accept="video/*">
+                <p id="file-name" class="text-gray-500">Arraste e solte o arquivo aqui ou clique para selecionar (máximo 2 GB)</p>
+            </div>
+            <div id="progress-bar-container" class="mt-2 hidden">
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-sm text-gray-600 mt-1">0%</p>
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <button type="submit" id="submit-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Adicionar</button>
+            <a href="{{ url_for('tutorials') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Mostrar/esconder subproduto com base no produto selecionado
+    document.getElementById('product').addEventListener('change', function() {
+        const subproductDiv = document.getElementById('subproductDiv');
+        subproductDiv.classList.toggle('hidden', this.value !== 'Creo Parametric');
+    });
+
+    // Drag-and-drop
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('video');
+    const fileNameDisplay = document.getElementById('file-name');
+    const titleInput = document.getElementById('title');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => {
+            dropArea.classList.add('border-blue-500', 'bg-blue-50');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => {
+            dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+        }, false);
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.size <= 2 * 1024 * 1024 * 1024) {
+                fileInput.files = files;
+                fileNameDisplay.textContent = file.name;
+                const extractedTitle = file.name.split('.').slice(0, -1).join('.').replace(/[^a-zA-Z0-9\s]/g, ' ').trim().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+                titleInput.value = extractedTitle;
+            } else {
+                fileNameDisplay.textContent = 'Erro: O arquivo excede o limite de 2 GB.';
+                fileNameDisplay.classList.add('text-red-500');
+            }
+        }
+    }, false);
+
+    dropArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            if (file.size <= 2 * 1024 * 1024 * 1024) {
+                fileNameDisplay.textContent = file.name;
+                fileNameDisplay.classList.remove('text-red-500');
+                const extractedTitle = file.name.split('.').slice(0, -1).join('.').replace(/[^a-zA-Z0-9\s]/g, ' ').trim().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+                titleInput.value = extractedTitle;
+            } else {
+                fileNameDisplay.textContent = 'Erro: O arquivo excede o limite de 2 GB.';
+                fileNameDisplay.classList.add('text-red-500');
+                fileInput.value = '';
+            }
+        }
+    });
+
+    // Upload com barra de progresso
+    const form = document.getElementById('uploadForm');
+    const progressBarContainer = document.getElementById('progress-bar-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const file = formData.get('video');
+
+        if (!file || file.size === 0) {
+            alert('Por favor, selecione um arquivo.');
+            return;
+        }
+
+        progressBarContainer.classList.remove('hidden');
+        submitBtn.disabled = true;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action, true);
+        xhr.responseType = 'json';
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                progressBar.style.width = percentComplete + '%';
+                progressText.textContent = Math.round(percentComplete) + '%';
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                try {
+                    const response = xhr.response;
+                    if (response.status === 'success') {
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100% - Concluído!';
+                        setTimeout(() => {
+                            window.location.href = response.redirect;
+                        }, 1000);
+                    } else {
+                        progressText.textContent = response.message || 'Erro desconhecido.';
+                        submitBtn.disabled = false;
+                        alert(response.message || 'Erro ao adicionar tutorial.');
+                    }
+                } catch (e) {
+                    progressText.textContent = 'Erro ao processar resposta do servidor.';
+                    submitBtn.disabled = false;
+                    alert('Erro ao processar resposta do servidor: ' + e.message);
+                }
+            } else {
+                progressText.textContent = 'Erro no upload. Status: ' + xhr.status;
+                submitBtn.disabled = false;
+                alert('Erro no upload. Status: ' + xhr.status + ' - ' + (xhr.response?.message || 'Detalhes não disponíveis'));
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            progressText.textContent = 'Erro na conexão.';
+            submitBtn.disabled = false;
+            alert('Erro na conexão ao fazer upload do arquivo.');
+        });
+
+        xhr.send(formData);
+    });
+</script>
+{% endblock %}
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'946646c0aa8c452b',t:'MTc0ODM1NjkyMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'946749a1c9ecc5a9',t:'MTc0ODM2NzUyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>

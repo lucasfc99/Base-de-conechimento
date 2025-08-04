@@ -1,0 +1,138 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends "base.html" %}
+{% block title %}Perguntas Frequentes{% endblock %}
+{% block content %}
+<div class="max-w-7.5xl mx-auto min-h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300 w-full">
+        <h2 class="text-2xl font-bold mb-6">{{ article['title'] }}</h2>
+        
+        <h3 class="article-title mb-2">{{ article['title'] }}</h3>
+        <p class="text-gray-600 text-sm mb-2">Produto: {{ article['product'] }}</p>
+        {% if article['subproduct'] and article['subproduct'] != '' %}
+            <p class="text-gray-600 text-sm mb-4">Sub-Produto: {{ article['subproduct'] }}</p>
+        {% else %}
+            <div class="mb-4"></div>
+        {% endif %}
+        <div class="mb-4">
+            <p class="text-gray-800 font-semibold text-[1.3rem]">Descrição:</p>
+            <p class="text-gray-600 mt-1">{{ article['question'] }}</p>
+        </div>
+        <div class="text-blue-500">
+            _____________________________________________________________________________________________________________________________________________________________________________________________________________
+            <br><br>
+        </div>
+        <div class="mb-4">
+            <p class="text-gray-800 font-semibold text-[1.3rem]">Solução:</p>
+            <br>
+            <div style="white-space: pre-wrap;">{{ article['solution'] | safe }}</div>
+        </div>
+        {% if article['media'] %}
+            <div class="mt-4">
+                <h4 class="text-lg font-medium mb-2">Mídias e Arquivos</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for media in article['media'] %}
+                        <div class="flex flex-col items-center">
+                            {% set filename = media['media_path'].split('/')[-1] %}
+                            {% if media['media_path'].endswith(('.mp4', '.mov')) %}
+                                <div class="flex-shrink-0 flex flex-col items-center">
+                                    <a href="{{ url_for('static', filename=media['media_path']) }}" download class="cursor-pointer">
+                                        <video controls class="w-70 h-90 object-cover rounded-md">
+                                            <source src="{{ url_for('static', filename=media['media_path']) }}" type="video/mp4">
+                                            Seu navegador não suporta o elemento de vídeo.
+                                        </video>
+                                    </a>
+                                    <span class="text-gray-700 truncate max-w-[10ch] mt-1 text-sm cursor-pointer" onclick="window.location.href='{{ url_for('static', filename=media['media_path']) }}';">{{ filename|truncate(10, True, '...', False) }}</span>
+                                </div>
+                            {% elif media['media_path'].endswith('.pdf') %}
+                                <div class="flex-shrink-0 flex flex-col items-center">
+                                    <a href="{{ url_for('static', filename=media['media_path']) }}" download class="cursor-pointer">
+                                        <img src="{{ url_for('static', filename='images/pdf-icon.png') }}" alt="PDF Icon" class="w-20 h-20 object-contain rounded-md">
+                                    </a>
+                                    <span class="text-gray-700 truncate max-w-[10ch] mt-1 text-sm cursor-pointer" onclick="window.location.href='{{ url_for('static', filename=media['media_path']) }}';">{{ filename|truncate(10, True, '...', False) }}</span>
+                                </div>
+                            {% elif media['media_path'].endswith(('.doc', '.docx')) %}
+                                <div class="flex-shrink-0 flex flex-col items-center">
+                                    <a href="{{ url_for('static', filename=media['media_path']) }}" download class="cursor-pointer">
+                                        <img src="{{ url_for('static', filename='images/word-icon.png') }}" alt="Word Icon" class="w-20 h-20 object-contain rounded-md">
+                                    </a>
+                                    <span class="text-gray-700 truncate max-w-[10ch] mt-1 text-sm cursor-pointer" onclick="window.location.href='{{ url_for('static', filename=media['media_path']) }}';">{{ filename|truncate(10, True, '...', False) }}</span>
+                                </div>
+                            {% elif media['media_path'].endswith('.txt') %}
+                                <div class="flex-shrink-0 flex flex-col items-center">
+                                    <a href="{{ url_for('static', filename=media['media_path']) }}" download class="cursor-pointer">
+                                        <img src="{{ url_for('static', filename='images/txt-icon.png') }}" alt="TXT Icon" class="w-20 h-20 object-contain rounded-md">
+                                    </a>
+                                    <span class="text-gray-700 truncate max-w-[10ch] mt-1 text-sm cursor-pointer" onclick="window.location.href='{{ url_for('static', filename=media['media_path']) }}';">{{ filename|truncate(10, True, '...', False) }}</span>
+                                </div>
+                            {% else %}
+                                <div class="flex-shrink-0 flex flex-col items-center">
+                                    <a href="{{ url_for('static', filename=media['media_path']) }}" download class="cursor-pointer">
+                                        <img src="{{ url_for('static', filename=media['media_path']) }}" alt="Imagem" class="w-70 h-80 object-cover rounded-md">
+                                    </a>
+                                    <span class="text-gray-700 truncate max-w-[10ch] mt-1 text-sm cursor-pointer" onclick="window.location.href='{{ url_for('static', filename=media['media_path']) }}';">{{ filename|truncate(10, True, '...', False) }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+        <div class="mt-6 flex flex-col md:flex-row md:items-center justify-between">
+            <div class="flex space-x-4 mb-2 md:mb-0">
+                <a href="{{ url_for('index') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Voltar</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('edit_article', id=article['id']) }}" class="bg-yellow-300 text-white px-4 py-2 rounded-lg shadow hover:bg-yellow-400 transition-colors">Editar</a>
+                {% endif %}
+            </div>
+            <div class="text-gray-500 text-sm text-right">
+                Criado por {{ article['created_by_username'] }} em {{ article['created_at'] }}
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+{% endblock %}

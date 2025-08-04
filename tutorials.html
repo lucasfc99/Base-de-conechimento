@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Vídeos Tutoriais{% endblock %}
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
+    <h3 class="text-lg font-semibold mb-4">Tutoriais</h3>
+    <form method="GET" id="searchForm" class="flex flex-col space-y-4">
+        <div class="flex items-center space-x-2">
+            <div class="relative flex-1">
+                <input type="text" name="search" id="search" placeholder="Pesquisar por título..." value="{{ request.args.get('search', '') }}" class="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Buscar</button>
+            <a href="{{ url_for('tutorials') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Limpar</a>
+			
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('add_tutorial') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors ml-4">Adicionar Vídeo</a>
+    {% endif %}
+        </div>
+        <div class="flex flex-col md:flex-row md:space-x-4">
+            <div class="flex items-center space-x-2">
+                <label for="sort" class="text-gray-600">Ordenar por:</label>
+                <select name="sort" id="sort" onchange="document.getElementById('searchForm').submit()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="asc" {% if request.args.get('sort', 'asc') == 'asc' %}selected{% endif %}>Mais Antigo</option>
+					<option value="desc" {% if request.args.get('sort', 'desc') == 'desc' %}selected{% endif %}>Mais Recente</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2">
+                <label for="product" class="text-gray-600">Produto:</label>
+                <select name="product" id="product" onchange="handleProductChange()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" {% if not request.args.get('product') %}selected{% endif %}>Todos</option>
+                    <option value="Creo Parametric" {% if request.args.get('product') == 'Creo Parametric' %}selected{% endif %}>Creo Parametric</option>
+                    <option value="Creo View" {% if request.args.get('product') == 'Creo View' %}selected{% endif %}>Creo View</option>
+                    <option value="Windchill" {% if request.args.get('product') == 'Windchill' %}selected{% endif %}>Windchill</option>
+                    <option value="Toolkit" {% if request.args.get('product') == 'Toolkit' %}selected{% endif %}>Toolkit</option>
+                    <option value="Illustrate" {% if request.args.get('product') == 'Illustrate' %}selected{% endif %}>Illustrate</option>
+                    <option value="Mathcad" {% if request.args.get('product') == 'Mathcad' %}selected{% endif %}>Mathcad</option>
+                    <option value="Outros" {% if request.args.get('product') == 'Outros' %}selected{% endif %}>Outros</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2" id="subproduct-container" {% if request.args.get('product') != 'Creo Parametric' %}style="display: none;"{% endif %}>
+                <label for="subproduct" class="text-gray-600">Sub-Produto:</label>
+                <select name="subproduct" id="subproduct" onchange="document.getElementById('searchForm').submit()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" {% if not request.args.get('subproduct') %}selected{% endif %}>Todos</option>
+                    <option value="Simulation" {% if request.args.get('subproduct') == 'Simulation' %}selected{% endif %}>Simulation</option>
+                    <option value="Creo Ansys" {% if request.args.get('subproduct') == 'Creo Ansys' %}selected{% endif %}>Creo Ansys</option>
+                    <option value="Render" {% if request.args.get('subproduct') == 'Render' %}selected{% endif %}>Render</option>
+                    <option value="Cabling" {% if request.args.get('subproduct') == 'Cabling' %}selected{% endif %}>Cabling</option>
+                    <option value="Piping" {% if request.args.get('subproduct') == 'Piping' %}selected{% endif %}>Piping</option>
+                </select>
+            </div>
+        </div>
+    </form>
+    <script>
+        function handleProductChange() {
+            var productSelect = document.getElementById('product');
+            var subproductContainer = document.getElementById('subproduct-container');
+            var subproductSelect = document.getElementById('subproduct');
+            if (productSelect.value === 'Creo Parametric') {
+                subproductContainer.style.display = 'flex';
+            } else {
+                subproductContainer.style.display = 'none';
+                subproductSelect.value = '';
+            }
+            document.getElementById('searchForm').submit();
+        }
+    </script>
+</div>
+{% if tutorials %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for tutorial in tutorials %}
+            <div class="flex flex-col">
+                <a href="{{ url_for('view_tutorial', id=tutorial.id) }}" class="w-full group">
+                    <div class="relative w-full pb-[56.25%] rounded-lg overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300 thumbnail-container">
+                        {% if tutorial.thumbnail_path and tutorial.thumbnail_path.strip() %}
+                            {% set thumbnail_url = url_for('static', filename=tutorial.thumbnail_path) %}
+                            <script>console.log("Thumbnail URL para {{ tutorial.title }}: {{ thumbnail_url }}");</script>
+                            <img src="{{ thumbnail_url }}" alt="{{ tutorial.title }} Thumbnail" class="thumbnail-image" onload="console.log('Imagem carregada com sucesso: {{ tutorial.title }}', this.width, this.height)" onerror="console.log('Erro ao carregar imagem: {{ tutorial.title }}', this.error);">
+                        {% else %}
+                            <script>console.log("Sem thumbnail para {{ tutorial.title }}");</script>
+                            <div class="absolute top-0 left-0 w-full h-full bg-gray-300 flex items-center justify-center text-gray-500">
+                                Sem Thumbnail
+                            </div>
+                        {% endif %}
+                        <div class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                            {{ "00:00" }}
+                        </div>
+                    </div>
+                </a>
+                <div class="mt-3">
+                    <a href="{{ url_for('view_tutorial', id=tutorial.id) }}" class="text-lg font-semibold text-gray-800 hover:text-blue-600 line-clamp-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        {{ tutorial.title }}
+                    </a>
+                    <p class="text-sm text-gray-500 mt-1">
+                        {{ tutorial.product }} {% if tutorial.subproduct %} • {{ tutorial.subproduct }}{% endif %}
+                    </p>
+                    <p class="text-sm text-gray-600 mt-1 line-clamp-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        {{ tutorial.description|truncate(100, True, '...') }}
+                    </p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Criado por: {{ tutorial.created_by_username }} em {{ tutorial.created_at }}
+                        {% if tutorial.modified_by_username %}
+                            | Modificado por: {{ tutorial.modified_by_username }} em {{ tutorial.modified_at }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% if current_user.is_admin %}
+                    <div class="mt-2">
+                        <a href="{{ url_for('edit_tutorial', id=tutorial.id) }}" class="text-blue-500 hover:text-blue-700">Editar</a>
+                        <form action="{{ url_for('delete_tutorial', id=tutorial.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este vídeo?');" style="display:inline;">
+                            <button type="submit" class="text-red-500 hover:text-red-700 ml-2">Excluir</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="text-gray-600">Nenhum vídeo tutorial encontrado.</p>
+{% endif %}
+</div>
+<style>
+    .thumbnail-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%;
+        overflow: hidden;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .thumbnail-container:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .thumbnail-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transition: opacity 0.3s;
+    }
+</style>
+{% endblock %}

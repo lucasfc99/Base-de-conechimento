@@ -1,0 +1,292 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<!-- Mensagens flash -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="mt-4">
+            {% for category, message in messages %}
+                <div class="bg-{{ 'green-100' if category == 'success' else 'red-100' }} border border-{{ 'green-400' if category == 'success' else 'red-400' }} text-{{ 'green-700' if category == 'success' else 'red-700' }} px-4 py-3 rounded relative mb-4" role="alert">
+                    <span class="block sm:inline">{{ message }}</span>
+                    <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                        <svg class="fill-current h-6 w-6 text-{{ 'green-500' if category == 'success' else 'red-500' }}" role="button" onclick="this.parentElement.parentElement.remove()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Fechar</title><path d="M14.348 14.849a1 1 0 01-1.414 0L10 11.414l-2.934 2.935a1 1 0 01-1.414-1.414L8.586 10 5.652 7.065a1 1 0 011.414-1.414L10 8.586l2.934-2.935a1 1 0 011.414 1.414L11.414 10l2.934 2.849a1 1 0 010 1.414z"/></svg>
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<!-- Popup de OTP -->
+{% if not otp_enabled %}
+    <div id="otpPopup" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-lg relative">
+            <!-- Botão de fechar (X) -->
+            <button id="closeOtpPopup" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Configurar Autenticação de Dois Fatores</h2>
+            <p class="text-gray-600 mb-6">Para garantir a segurança da sua conta, configure a autenticação de dois fatores (OTP) usando o Google Authenticator. Isso ajudará na recuperação da sua conta, se necessário.</p>
+            <div class="flex justify-end">
+                <a href="{{ url_for('setup_otp', username=current_user.username) }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">Configurar OTP</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Fechar popup ao clicar no botão "X"
+        document.getElementById('closeOtpPopup').addEventListener('click', function() {
+            document.getElementById('otpPopup').style.display = 'none';
+        });
+        // Fechar popup ao clicar fora dele
+        document.getElementById('otpPopup').addEventListener('click', function(event) {
+            if (event.target === this) {
+                this.style.display = 'none';
+            }
+        });
+    </script>
+{% endif %}
+
+<!-- Barra de Filtros -->
+<div class="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
+    <h3 class="text-lg font-semibold mb-4">Perguntas Frequentes</h3>
+    <!-- Formulário de Busca -->
+    <form method="GET" id="searchForm" action="{{ url_for('search') }}" class="flex items-center space-x-2 mb-4">
+        <div class="relative flex-1">
+            <input type="text" name="query" id="search" placeholder="Pesquisar FAQs, Vídeos e Procedimentos..." value="{{ request.args.get('query', '') }}" class="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Buscar</button>
+        <a href="{{ url_for('index') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Limpar</a>
+    </form>
+    <!-- Formulário de Filtros -->
+    <form method="GET" id="filterForm" action="{{ url_for('index') }}" class="flex flex-col md:flex-row md:space-x-4">
+        <div class="flex items-center space-x-2">
+            <label for="sort" class="text-gray-600">Ordenar por:</label>
+            <select name="sort" id="sort" onchange="this.form.submit()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="asc" {% if request.args.get('sort', 'asc') == 'asc' %}selected{% endif %}>Mais Antigo</option>
+                <option value="desc" {% if request.args.get('sort', 'desc') == 'desc' %}selected{% endif %}>Mais Recente</option>
+            </select>
+        </div>
+        <div class="flex items-center space-x-2">
+            <label for="product" class="text-gray-600">Produto:</label>
+            <select name="product" id="product" onchange="handleProductChange()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" {% if not request.args.get('product') %}selected{% endif %}>Todos</option>
+                <option value="Creo Parametric" {% if request.args.get('product') == 'Creo Parametric' %}selected{% endif %}>Creo Parametric</option>
+                <option value="Creo View" {% if request.args.get('product') == 'Creo View' %}selected{% endif %}>Creo View</option>
+                <option value="Windchill" {% if request.args.get('product') == 'Windchill' %}selected{% endif %}>Windchill</option>
+                <option value="Toolkit" {% if request.args.get('product') == 'Toolkit' %}selected{% endif %}>Toolkit</option>
+                <option value="Illustrate" {% if request.args.get('product') == 'Illustrate' %}selected{% endif %}>Illustrate</option>
+                <option value="Mathcad" {% if request.args.get('product') == 'Mathcad' %}selected{% endif %}>Mathcad</option>
+                <option value="Outros" {% if request.args.get('product') == 'Outros' %}selected{% endif %}>Outros</option>
+            </select>
+        </div>
+        <div class="flex items-center space-x-2" id="subproduct-container" {% if request.args.get('product') != 'Creo Parametric' %}style="display: none;"{% endif %}>
+            <label for="subproduct" class="text-gray-600">Sub-Produto:</label>
+            <select name="subproduct" id="subproduct" onchange="this.form.submit()" class="p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" {% if not request.args.get('subproduct') %}selected{% endif %}>Todos</option>
+                <option value="Simulation" {% if request.args.get('subproduct') == 'Simulation' %}selected{% endif %}>Simulation</option>
+                <option value="Creo Ansys" {% if request.args.get('subproduct') == 'Creo Ansys' %}selected{% endif %}>Creo Ansys</option>
+                <option value="Render" {% if request.args.get('subproduct') == 'Render' %}selected{% endif %}>Render</option>
+                <option value="Cabling" {% if request.args.get('subproduct') == 'Cabling' %}selected{% endif %}>Cabling</option>
+                <option value="Piping" {% if request.args.get('subproduct') == 'Piping' %}selected{% endif %}>Piping</option>
+            </select>
+        </div>
+    </form>
+    <script>
+        function handleProductChange() {
+            var productSelect = document.getElementById('product');
+            var subproductContainer = document.getElementById('subproduct-container');
+            var subproductSelect = document.getElementById('subproduct');
+            if (productSelect.value === 'Creo Parametric') {
+                subproductContainer.style.display = 'flex';
+            } else {
+                subproductContainer.style.display = 'none';
+                subproductSelect.value = '';
+            }
+            document.getElementById('filterForm').submit();
+        }
+    </script>
+</div>
+
+{% if articles %}
+    {% for article in articles %}
+        <div class="bg-white p-6 rounded-lg shadow-md mb-4 border border-gray-200 hover:shadow-lg transition-shadow duration-300 flex flex-col md:flex-row">
+            <div class="flex-1">
+                <h3 class="article-title mb-4">{{ article.title }}</h3>
+                <div class="mb-4">
+                    <p class="text-gray-800 font-semibold text-[1.3rem]">Descrição:</p>
+                    <p class="text-gray-600 mt-1 line-clamp-3" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ article.question }}</p>
+                </div>
+                <div class="mb-4">
+                    <p class="text-gray-800 font-semibold text-[1.3rem]">Solução:</p>
+                    <p class="text-gray-600 mt-1 line-clamp-3" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ article.solution }}</p>
+                </div>
+                <div class="mt-4 flex flex-col md:flex-row md:items-center justify-between">
+                    <div class="flex space-x-4 mb-2 md:mb-0">
+                        <a href="{{ url_for('view_article', id=article.id) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Ver Detalhes</a>
+                        {% if current_user.is_authenticated and (current_user.id == article.created_by or current_user.is_admin) %}
+                            {% if current_user.is_admin %}
+                                <form action="{{ url_for('delete_article', id=article.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este artigo?');" style="display:inline;">
+                                    <button type="submit" class="text-red-500 hover:text-red-700">Excluir</button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if article.media %}
+                <div class="mt-4 md:mt-0 md:ml-6 w-48 flex-shrink-0">
+                    <h4 class="text-lg font-medium mb-2">Mídias e Arquivos</h4>
+                    <div class="flex flex-col space-y-2">
+                        {% for media in article.media %}
+                            {% if loop.index0 < 2 %}
+                                {% if media.media_path.endswith(('.mp4', '.mov', '.mkv', '.avi', '.wmv')) %}
+                                    <div class="flex-shrink-0">
+                                        <a href="{{ url_for('view_article', id=article.id) }}" target="_blank">
+                                            <img src="{{ url_for('static', filename='images/video-icon.png') }}" alt="Video Icon" class="w-20 h-20 object-contain rounded-md">
+                                        </a>
+                                    </div>
+                                {% elif media.media_path.endswith('.pdf') %}
+                                    <div class="flex-shrink-0">
+                                        <a href="{{ url_for('static', filename=media.media_path) }}" target="_blank">
+                                            <img src="{{ url_for('static', filename='images/pdf-icon.png') }}" alt="PDF Icon" class="w-20 h-20 object-contain rounded-md">
+                                        </a>
+                                    </div>
+                                {% elif media.media_path.endswith(('.doc', '.docx')) %}
+                                    <div class="flex-shrink-0">
+                                        <a href="{{ url_for('static', filename=media.media_path) }}" target="_blank">
+                                            <img src="{{ url_for('static', filename='images/word-icon.png') }}" alt="Word Icon" class="w-20 h-20 object-contain rounded-md">
+                                        </a>
+                                    </div>
+                                {% elif media.media_path.endswith('.txt') %}
+                                    <div class="flex-shrink-0">
+                                        <a href="{{ url_for('static', filename=media.media_path) }}" target="_blank">
+                                            <img src="{{ url_for('static', filename='images/txt-icon.png') }}" alt="TXT Icon" class="w-20 h-20 object-contain rounded-md">
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <div class="flex-shrink-0">
+                                        <a href="{{ url_for('static', filename=media.media_path) }}" target="_blank">
+                                            <img src="{{ url_for('static', filename=media.media_path) }}" alt="Imagem" class="w-20 h-20 object-cover rounded-md">
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% else %}
+    <p class="text-gray-600">Nenhum artigo encontrado.</p>
+{% endif %}
+
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'94d87091ad79a6f4',t:'MTc0OTU1NDAwOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'94d95003cae0bfce',t:'MTc0OTU2MzE2Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+{% endblock %}

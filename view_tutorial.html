@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Vídeo Tutorial: {{ tutorial.title }}{% endblock %}
+{% block content %}
+<div class="max-w-7.5xl mx-auto min-h-screen">
+    <h2 class="text-2xl font-bold mb-6">Vídeo Tutorial: {{ tutorial.title }}</h2>
+
+    <!-- Player de vídeo -->
+    <div class="mb-6">
+        <video controls class="w-full rounded-lg shadow-md" style="max-height: 500px;">
+            <source src="{{ url_for('static', filename=tutorial.video_path) }}" type="video/mp4">
+            Seu navegador não suporta o elemento de vídeo.
+        </video>
+    </div>
+
+    <!-- Informações do vídeo -->
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <p class="text-gray-600 mb-2"><strong>Descrição:</strong> {{ tutorial.description }}</p>
+        <p class="text-gray-600 mb-2"><strong>Duração:</strong> {{ tutorial.formatted_duration }}</p>
+        <p class="text-gray-600 mb-2"><strong>Produto:</strong> {{ tutorial.product }}</p>
+        {% if tutorial.subproduct %}
+            <p class="text-gray-600 mb-2"><strong>Subproduto:</strong> {{ tutorial.subproduct }}</p>
+        {% endif %}
+        <p class="text-gray-600 mb-2"><strong>Criado por:</strong> {{ tutorial.created_by_username }} em {{ tutorial.created_at }}</p>
+        {% if tutorial.modified_by_username %}
+            <p class="text-gray-600 mb-2"><strong>Modificado por:</strong> {{ tutorial.modified_by_username }} em {{ tutorial.modified_at }}</p>
+        {% endif %}
+        <div class="mt-4 flex space-x-4">
+            <a href="{{ url_for('tutorials') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Voltar</a>
+            <a href="{{ url_for('edit_tutorial', id=tutorial.id) }}" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors">Editar Tutorial</a>
+            {% if current_user.is_admin %}
+            <form action="{{ url_for('delete_tutorial', id=tutorial.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este tutorial?');">
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition-colors">Excluir Tutorial</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

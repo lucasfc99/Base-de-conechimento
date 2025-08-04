@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Importação em Lote de Procedimentos Técnicos{% endblock %}
+{% block content %}
+<div class="max-w-7.5xl mx-auto min-h-screen">
+    <h2 class="text-3xl font-bold mb-6 text-gray-800">Importação em Lote de Procedimentos Técnicos</h2>
+    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-4">
+                <label for="titles" class="block text-gray-700 font-semibold">Títulos (um por linha)</label>
+                <textarea id="titles" name="titles" class="w-full p-2 border rounded" rows="5" placeholder="Digite um título por linha..." required></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="pdf_files" class="block text-gray-700 font-semibold">Arquivos PDF (selecionar múltiplos)</label>
+                <input type="file" id="pdf_files" name="pdf_files" class="w-full p-2 border rounded" accept=".pdf" multiple required>
+            </div>
+            <div class="mb-4">
+                <label for="word_files" class="block text-gray-700 font-semibold">Arquivos Word (opcional, selecionar múltiplos)</label>
+                <input type="file" id="word_files" name="word_files" class="w-full p-2 border rounded" accept=".doc,.docx" multiple>
+            </div>
+            <div class="mb-4">
+                <label for="product" class="block text-gray-700 font-semibold">Produto</label>
+                <select id="product" name="product" class="w-full p-2 border rounded" required>
+                    <option value="Creo Parametric">Creo Parametric</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+            <div class="mb-4" id="subproduct_div" style="display: none;">
+                <label for="subproduct" class="block text-gray-700 font-semibold">Sub-Produto</label>
+                <select id="subproduct" name="subproduct" class="w-full p-2 border rounded">
+                    <option value="Modelagem">Modelagem</option>
+                    <option value="Montagem">Montagem</option>
+                    <option value="Desenho">Desenho</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Adicionar em Lote</button>
+        </form>
+    </div>
+</div>
+<script>
+    document.getElementById('titles').addEventListener('input', function() {
+        const titles = this.value.split('\n').filter(title => title.trim() !== '');
+        const keywords = ['Creo', 'creo', 'Windchill', 'windchill'];
+        const productSelect = document.getElementById('product');
+        let foundKeyword = false;
+
+        for (let title of titles) {
+            if (keywords.some(keyword => title.toLowerCase().includes(keyword.toLowerCase()))) {
+                foundKeyword = true;
+                break;
+            }
+        }
+
+        if (foundKeyword) {
+            productSelect.value = 'Creo Parametric';
+        } else {
+            productSelect.value = 'Outros';
+        }
+    });
+
+    document.getElementById('product').addEventListener('change', function() {
+        var subproductDiv = document.getElementById('subproduct_div');
+        if (this.value === 'Creo Parametric') {
+            subproductDiv.style.display = 'block';
+        } else {
+            subproductDiv.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

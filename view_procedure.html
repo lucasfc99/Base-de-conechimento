@@ -1,0 +1,70 @@
+<DOCUMENT filename="view_procedure.html">
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+{% extends "base.html" %}
+{% block title %}Procedimento Técnico - {{ procedure.title }}{% endblock %}
+{% block content %}
+<div class="max-w-7.5xl mx-auto min-h-screen">
+    <h2 class="text-3xl font-bold mb-6 text-gray-800">Procedimento Técnico: {{ procedure.title }}</h2>
+    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-300">
+        <p class="text-gray-600 mb-2">{{ procedure.description if procedure.description else 'Sem descrição disponível' }}</p>
+        {% if procedure.preview_path %}
+            <img src="{{ url_for('static', filename=procedure.preview_path) }}" alt="Preview do Procedimento" class="mt-4 max-w-full h-auto rounded-lg">
+        {% elif procedure.preview_text %}
+            <p class="text-gray-600 mt-4">{{ procedure.preview_text }}</p>
+        {% else %}
+            <p class="text-gray-600 mt-4">Nenhum preview disponível.</p>
+        {% endif %}
+        
+        <p class="text-gray-500 text-sm mt-4">Produto: {{ procedure.product }}{% if procedure.subproduct %} - {{ procedure.subproduct }}{% endif %}</p>
+        <p class="text-gray-500 text-sm mt-2">Criado por: {{ procedure.created_by_username }} em {{ procedure.created_at }}</p>
+        {% if procedure.modified_by_username %}
+            <p class="text-gray-500 text-sm mt-2">Modificado por: {{ procedure.modified_by_username }} em {{ procedure.modified_at }}</p>
+        {% endif %}
+        <div class="mt-6 flex space-x-4">
+            <a href="{{ url_for('procedures') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Voltar</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('edit_procedure', id=procedure.id) }}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg shadow hover:bg-yellow-600 transition-colors">Editar</a>
+                <form action="{{ url_for('delete_procedure', id=procedure.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este procedimento?');" style="display:inline;">
+                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 transition-colors">Excluir</button>
+                </form>
+            {% endif %}
+            </div>
+    </div>
+</div>
+{% endblock %}
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'94d0d90e9ddb4576',t:'MTc0OTQ3NDQwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</DOCUMENT>

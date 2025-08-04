@@ -1,0 +1,230 @@
+<script type="text/javascript">
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+    if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+            var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+            var firstSheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[firstSheetName];
+
+            // Convert sheet to JSON to filter blank rows
+            var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+            // Filter out blank rows (rows where all cells are empty, null, or undefined)
+            var filteredData = jsonData.filter(row => row.some(filledCell));
+
+            // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+            var headerRowIndex = filteredData.findIndex((row, index) =>
+              row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+            );
+            // Fallback
+            if (headerRowIndex === -1 || headerRowIndex > 25) {
+              headerRowIndex = 0;
+            }
+
+            // Convert filtered JSON back to CSV
+            var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+            csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+            return csv;
+        } catch (e) {
+            console.error(e);
+            return "";
+        }
+    }
+    return gk_fileData[filename] || "";
+    }
+
+    // Funções para Drag and Drop
+    function isFileSupported(file) {
+        return file.size <= 2 * 1024 * 1024 * 1024; // Limite de 2 GB
+    }
+
+    function dragOverHandler(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add('dragover');
+    }
+
+    function dragLeaveHandler(ev) {
+        ev.currentTarget.classList.remove('dragover');
+    }
+
+    function dropHandler(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove('dragover');
+        const fileInput = document.getElementById('media');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const errorMessage = document.getElementById('errorMessage');
+        const dataTransfer = new DataTransfer();
+
+        errorMessage.textContent = ''; // Limpar mensagem de erro
+
+        if (ev.dataTransfer.files.length > 0) {
+            Array.from(ev.dataTransfer.files).forEach(file => {
+                if (isFileSupported(file)) {
+                    dataTransfer.items.add(file);
+                } else {
+                    errorMessage.textContent = `Erro: O arquivo "${file.name}" excede o limite de 2 GB.`;
+                }
+            });
+            fileInput.files = dataTransfer.files;
+            updateFileDisplay(fileInput.files);
+            console.log("Arquivos anexados ao input:", fileInput.files);
+        }
+    }
+
+    function triggerFileInput() {
+        document.getElementById('media').click();
+    }
+
+    function updateFileDisplay(files) {
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const errorMessage = document.getElementById('errorMessage');
+        if (files.length > 0) {
+            Array.from(files).forEach(file => {
+                if (!isFileSupported(file)) {
+                    errorMessage.textContent = `Erro: O arquivo "${file.name}" excede o limite de 2 GB.`;
+                }
+            });
+            fileNameDisplay.textContent = `Arquivos selecionados: ${Array.from(files).map(file => file.name).join(', ')}`;
+        } else {
+            fileNameDisplay.textContent = 'Nenhum arquivo selecionado';
+        }
+    }
+</script>
+{% extends "base.html" %}
+{% block title %}Editar Artigo{% endblock %}
+{% block content %}
+<div class="max-w-8xl mx-auto">
+    <h2 class="text-2xl font-bold mb-6">Editar FAQ</h2>
+    <form method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+        <div class="mb-4">
+            <label for="title" class="block text-gray-700 font-semibold mb-2">Título:</label>
+            <input type="text" name="title" id="title" value="{{ article.title }}" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="mb-4">
+            <label for="question" class="block text-gray-700 font-semibold mb-2">Descrição:</label>
+            <textarea name="question" id="question" rows="6" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ article.question if article.question else article.content }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label for="solution" class="block text-gray-700 font-semibold mb-2">Solução:</label>
+            <textarea name="solution" id="solution" rows="6" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>{{ article.solution if article.solution else article.content }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label for="product" class="block text-gray-700 font-semibold mb-2">Produto:</label>
+            <select name="product" id="product" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <option value="Creo Parametric" {% if article.product == 'Creo Parametric' %}selected{% endif %}>Creo Parametric</option>
+                <option value="Creo View" {% if article.product == 'Creo View' %}selected{% endif %}>Creo View</option>
+                <option value="Windchill" {% if article.product == 'Windchill' %}selected{% endif %}>Windchill</option>
+                <option value="Toolkit" {% if article.product == 'Toolkit' %}selected{% endif %}>Toolkit</option>
+                <option value="Illustrate" {% if article.product == 'Illustrate' %}selected{% endif %}>Illustrate</option>
+                <option value="Mathcad" {% if article.product == 'Mathcad' %}selected{% endif %}>Mathcad</option>
+                <option value="Outros" {% if article.product == 'Outros' %}selected{% endif %}>Outros</option>
+            </select>
+        </div>
+        <div class="mb-4" id="subproduct-container" style="display: {% if article.product == 'Creo Parametric' %}block{% else %}none{% endif %};">
+            <label for="subproduct" class="block text-gray-700 font-semibold mb-2">Sub-Produto:</label>
+            <select name="subproduct" id="subproduct" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" {% if not article.subproduct %}selected{% endif %}>Nenhum</option>
+                <option value="Simulation" {% if article.subproduct == 'Simulation' %}selected{% endif %}>Simulation</option>
+                <option value="Creo Ansys" {% if article.subproduct == 'Creo Ansys' %}selected{% endif %}>Creo Ansys</option>
+                <option value="Render" {% if article.subproduct == 'Render' %}selected{% endif %}>Render</option>
+                <option value="Cabling" {% if article.subproduct == 'Cabling' %}selected{% endif %}>Cabling</option>
+                <option value="Piping" {% if article.subproduct == 'Piping' %}selected{% endif %}>Piping</option>
+                <option value="Manufacturing" {% if article.subproduct == 'Manufacturing' %}selected{% endif %}>Manufacturing</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label for="media" class="block text-gray-700 font-semibold mb-2">Mídias e Arquivos (opcional, máximo 2 GB):</label>
+            <div class="dropzone" ondragover="dragOverHandler(event)" ondragleave="dragLeaveHandler(event)" ondrop="dropHandler(event)" onclick="triggerFileInput()">
+                <p>Arraste e solte arquivos aqui ou clique para selecionar</p>
+            </div>
+            <input type="file" name="media" id="media" multiple style="display: none;" onchange="updateFileDisplay(this.files)">
+            <small id="fileNameDisplay" class="block mt-2 text-gray-600">Nenhum arquivo selecionado</small>
+            <small id="errorMessage" class="block mt-2 text-red-600"></small>
+            <p class="text-gray-500 text-sm mt-1">Qualquer tipo de arquivo é aceito, com limite de 2 GB por arquivo.</p>
+        </div>
+        <div class="flex space-x-4">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">Atualizar Artigo</button>
+            <a href="{{ url_for('index') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-400 transition-colors">Cancelar</a>
+        </div>
+    </form>
+
+    <div class="mt-6">
+        <h3 class="text-lg font-semibold mb-4">Mídias Existentes:</h3>
+        {% if media %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for m in media %}
+                    <div class="flex flex-col items-center">
+                        {% set media_path = m['media_path']|default('') %}
+                        {% if media_path and media_path|length > 0 %}
+                            {% set filename = media_path.split('/')[-1] %}
+                            {% if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                                <img src="{{ url_for('static', filename=media_path) }}" alt="{{ filename }}" class="w-32 h-32 object-cover rounded" onerror="this.onerror=null; this.src='/static/images/default-logo.png'; console.log('Erro ao carregar imagem: ' + '{{ media_path }}');">
+                                <p class="text-sm text-gray-500">Caminho: {{ media_path }}</p>
+                            {% else %}
+                                <a href="{{ url_for('static', filename=media_path) }}" target="_blank" class="text-blue-600 hover:underline">{{ filename }}</a>
+                                <p class="text-sm text-gray-500">Caminho: {{ media_path }}</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-red-500">Caminho inválido: {{ media_path }}</p>
+                        {% endif %}
+                        <form action="{{ url_for('delete_media', media_id=m['id']) }}" method="POST" onsubmit="console.log('Enviando para: ' + '{{ url_for('delete_media', media_id=m['id']) }}'); return confirm('Tem certeza que deseja excluir esta mídia?');" class="mt-1">
+                            <button type="submit" class="text-red-500 hover:text-red-700">Excluir</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-gray-500">Nenhuma mídia associada.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('product').addEventListener('change', function() {
+            var subproductContainer = document.getElementById('subproduct-container');
+            if (this.value === 'Creo Parametric') {
+                subproductContainer.style.display = 'block';
+            } else {
+                subproductContainer.style.display = 'none';
+                document.getElementById('subproduct').value = ''; // Resetar subproduto
+            }
+        });
+    </script>
+</div>
+<style>
+    .dropzone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        background-color: #f9f9f9;
+        transition: all 0.4s ease-in-out;
+    }
+    .dropzone.dragover {
+        border-color: #1e90ff;
+        background-color: #d1e7ff;
+        box-shadow: 0 0 15px rgba(30, 144, 255, 0.7);
+        transform: translateY(-5px);
+        animation: enhancedPulse 1.2s infinite;
+    }
+    @keyframes enhancedPulse {
+        0% {
+            transform: translateY(-5px) scale(1);
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.7);
+        }
+        50% {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 0 20px rgba(30, 144, 255, 0.9);
+            background-color: #b3d9ff;
+        }
+        100% {
+            transform: translateY(-5px) scale(1);
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.7);
+        }
+    }
+</style>
+{% endblock %}
